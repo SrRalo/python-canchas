@@ -1,0 +1,122 @@
+-- ==============================
+-- 🧱 1. CREACIÓN DE TABLAS
+-- ==============================
+
+-- 1. Usuarios con roles definidos manualmente (NO cuenta para las 5 principales)
+CREATE TABLE usuarios (
+  id SERIAL PRIMARY KEY,
+  nombre VARCHAR(100) NOT NULL,
+  email VARCHAR(100) UNIQUE NOT NULL,
+  password TEXT NOT NULL,
+  rol VARCHAR(30) NOT NULL CHECK (rol IN ('admin', 'operador_reservas', 'consultor', 'registrador_eventos'))
+);
+
+-- 2. Tipos de cancha (fútbol, pádel)
+CREATE TABLE tipos_cancha (
+  id SERIAL PRIMARY KEY,
+  nombre VARCHAR(30) NOT NULL UNIQUE
+);
+
+-- 3. Canchas disponibles
+CREATE TABLE canchas (
+  id SERIAL PRIMARY KEY,
+  nombre VARCHAR(50) NOT NULL,
+  id_tipo INT REFERENCES tipos_cancha(id),
+  ubicacion TEXT,
+  disponible BOOLEAN DEFAULT TRUE
+);
+
+-- 4. Clientes que hacen reservas
+CREATE TABLE clientes (
+  id SERIAL PRIMARY KEY,
+  nombre VARCHAR(100) NOT NULL,
+  telefono VARCHAR(20),
+  email VARCHAR(100)
+);
+
+-- 5. Reservas realizadas
+CREATE TABLE reservas (
+  id SERIAL PRIMARY KEY,
+  id_cliente INT REFERENCES clientes(id) ON DELETE CASCADE,
+  id_cancha INT REFERENCES canchas(id) ON DELETE CASCADE,
+  fecha DATE NOT NULL,
+  hora_inicio TIME NOT NULL,
+  hora_fin TIME NOT NULL,
+  observacion TEXT,
+  CONSTRAINT chk_horas CHECK (hora_inicio < hora_fin)
+);
+
+-- 6. Horarios disponibles por cancha
+CREATE TABLE horarios_disponibles (
+  id SERIAL PRIMARY KEY,
+  id_cancha INT REFERENCES canchas(id) ON DELETE CASCADE,
+  dia_semana VARCHAR(10) NOT NULL CHECK (dia_semana IN ('lunes','martes','miércoles','jueves','viernes','sábado','domingo')),
+  hora_inicio TIME NOT NULL,
+  hora_fin TIME NOT NULL,
+  CONSTRAINT chk_horas_disponibles CHECK (hora_inicio < hora_fin)
+);
+
+-- 7. Registro de eventos (NO cuenta para las 5 principales)
+CREATE TABLE eventlogs (
+  id SERIAL PRIMARY KEY,
+  usuario_email VARCHAR(100),
+  accion TEXT NOT NULL,
+  fecha_hora TIMESTAMP DEFAULT current_timestamp,
+  tabla_afectada VARCHAR(50)
+);
+
+-- ==============================
+-- 🔐 2. GESTIÓN DE ROLES
+-- ==============================
+
+-- Crea los roles
+CREATE ROLE admin LOGIN PASSWORD 'admin_pass';
+CREATE ROLE operador_reservas LOGIN PASSWORD 'reserva_pass';
+CREATE ROLE consultor LOGIN PASSWORD 'consulta_pass';
+CREATE ROLE registrador_eventos LOGIN PASSWORD 'evento_pass';
+
+-- Revoca todo inicialmente
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM PUBLIC;
+
+-- Permisos específicos por rol
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO admin;
+
+GRANT SELECT, INSERT, UPDATE ON reservas, clientes TO operador_reservas;
+
+GRANT SELECT ON usuarios, canchas, clientes, reservas, eventlogs, tipos_cancha, horarios_disponibles TO consultor;
+
+GRANT INSERT ON eventlogs TO registrador_eventos;
+
+-- ==============================
+-- 🧪 3. DATOS DE PRUEBA (Opcional)
+-- ==============================
+
+-- Tipos de cancha
+INSERT INTO tipos_cancha (nombre) VALUES ('fútbol'), ('pádel');
+
+-- Canchas
+INSERT INTO canchas (nombre, id_tipo, ubicacion, disponible)
+VALUES 
+  ('Cancha 1', 1, 'Sector A', TRUE),
+  ('Cancha 2', 2, 'Sector B', TRUE);
+
+-- Clientes
+INSERT INTO clientes (nombre, telefono, email)
+VALUES 
+  ('Juan Pérez', '12345678', 'juan@example.com'),
+  ('María Gómez', '87654321', 'maria@example.com');
+
+-- Horarios disponibles
+INSERT INTO horarios_disponibles (id_cancha, dia_semana, hora_inicio, hora_fin)
+VALUES 
+  (1, 'lunes', '18:00', '20:00'),
+  (2, 'martes', '17:00', '19:00');
+
+-- Reserva de ejemplo
+INSERT INTO reservas (id_cliente, id_cancha, fecha, hora_inicio, hora_fin, observacion)
+VALUES (1, 1, CURRENT_DATE, '18:00', '19:00', 'Partido amistoso');
+
+-- Admin por defecto
+INSERT INTO usuarios (nombre, email, password_hash, rol)
+VALUES ('Administrador', 'admin@club.com', 'hash_simulado_123', 'admin');
+
