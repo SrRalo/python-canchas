@@ -5,6 +5,18 @@ from datetime import datetime
 import re
 from dashboard import mostrar_dashboard 
 
+# Debe ser la primera llamada a Streamlit
+st.set_page_config(
+    page_title="Reservas Deportivas",
+    page_icon="⚽",
+    layout="wide", 
+    initial_sidebar_state="expanded"
+)
+
+from session_manager import check_authentication, login_user, logout_user
+
+
+
 def mostrar_formulario_login():
     with st.form("login_form"):
         st.subheader("🔐 Iniciar Sesión")
@@ -24,8 +36,8 @@ def mostrar_formulario_login():
                 usuario = res.data[0]
                 if bcrypt.checkpw(password.encode("utf-8"), usuario["password"].encode("utf-8")):
                     st.success(f"✅ Bienvenido, {usuario['nombre']}!")
-                    st.session_state.usuario = usuario
-                    st.rerun()  # Cambio aquí
+                    login_user(usuario)
+                    st.rerun()
                 else:
                     st.error("❌ Contraseña incorrecta")
             else:
@@ -108,24 +120,26 @@ def mostrar_formulario_registro():
 
 from dashboard import mostrar_dashboard  # Importar la función desde dashboard.py
 
-# Configuración de la página - debe estar al inicio
-st.set_page_config(
-    page_title="Reservas Deportivas",
-    page_icon="⚽",
-    layout="centered",
-    initial_sidebar_state="expanded"
-)
 
 def main():
-    st.title("🏟️ Sistema de Reservas Deportivas")
-
-    if "usuario" not in st.session_state:
-        opcion = st.radio("Selecciona una opción", ["Iniciar sesión", "Registrarse"])
-        if opcion == "Iniciar sesión":
-            mostrar_formulario_login()
-        else:
-            mostrar_formulario_registro()
+    with st.container():
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.title("🏟️ Sistema de Reservas Deportivas")
+    
+    if not check_authentication():
+        # Para login/registro, usamos un contenedor centrado
+        with st.container():
+            col1, col2, col3 = st.columns([1, 2, 1])
+            with col2:
+                opcion = st.radio("Selecciona una opción", ["Iniciar sesión", "Registrarse"])
+                if opcion == "Iniciar sesión":
+                    mostrar_formulario_login()
+                else:
+                    mostrar_formulario_registro()
     else:
+        # Si el usuario está logueado, mostrar dashboard
+        st.query_params["layout"] = "wide"
         mostrar_dashboard()
 
 if __name__ == "__main__":
