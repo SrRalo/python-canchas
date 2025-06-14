@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Base dependencies
 streamlit==1.29.0
 python-dotenv==1.0.0
@@ -17,3 +18,9 @@ plotly==5.18.0
 # System Information
 platform-info==0.1.0
 psutil==5.9.7
+=======
+streamlit
+supabase-py
+python-dotenv
+bcrypt
+>>>>>>> 79b1d7e81c7b73cf4b70995ac19bc2bb9a08ea1c
